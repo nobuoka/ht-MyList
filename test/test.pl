@@ -3,11 +3,22 @@ use warnings;
 
 use My::List;
 
-my $list = new My::List();
-$list->append( "va" );
+sub test {
+    my $list = new My::List();
+    $list->append( "va" );
 $list->append( "vvv" );
-my $iterator = $list->iterator;
-while( $iterator->has_next ) {
-    print $iterator->next, "\n";
+my $it1 = $list->iterator;
+my $it2 = $list->iterator;
+my $it3 = $list->iterator;
+while( $it1->has_next ) {
+    print $it1->next, "\n";
+    print $it2->next, "\n";
+    print $it3->next, "\n";
 }
+}
+
+&test;
+&test;
+&test;
+
 

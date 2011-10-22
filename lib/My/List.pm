@@ -1,15 +1,38 @@
 use strict;
 use warnings;
 
+use My::List::Iterator;
+
 package My::List;
 
 sub new {
     my $class = shift;
+    my $begin_elem = {
+        "next" => undef,
+        "prev" => undef,
+        "value" => undef,
+        "it" => undef,
+    };
     bless {
-        "b" => undef,
-        "e" => undef,
+        "b" => $begin_elem,
+        "e" => $begin_elem,
         "length" => 0
     }, $class;
+}
+
+# DESTROY 時には Iterator は存在しない
+sub DESTROY {
+    my $self = shift;
+    my $e = $self->{"b"};
+    my $n;
+    do {
+        $n = $e->{"next"};
+        my @keys = keys %$e;
+        foreach( @keys ) {
+            undef $e->{$_}; 
+        }
+        print "DESTROY", "\n";
+    } while( $e = $n )
 }
 
 sub append {
@@ -18,39 +41,19 @@ sub append {
     my $elem = {
         "next" => undef,
         "prev" => $self->{"e"},
-        "value" => $value
+        "value" => $value,
+        "it" => undef,
     };
-    $self->{"e"}{"next"} = $elem if $self->{"e"};
+    $self->{"e"}{"next"} = $elem;
     $self->{"e"} = $elem;
-    $self->{"b"} = $elem unless $self->{"b"};
     ++ $self->{"length"}; 
+    return $value;
 }
 
 sub iterator {
     my $self = shift;
-    My::List::Iterator->new( $self );
-}
-
-package My::List::Iterator;
-
-sub new {
-    my $class = shift;
-    my $list  = shift;
-    bless {
-        "next_elem" => $list->{"b"}
-    }, $class;
-}
-
-sub has_next {
-    my $self = shift;
-    return !!( $self->{"next_elem"} );
-}
-
-sub next {
-    my $self = shift;
-    my $next_elem = $self->{"next_elem"};
-    $self->{"next_elem"} = $next_elem->{"next"};
-    return $next_elem->{"value"};
+    return My::List::Iterator->new( $self );
 }
 
 1;
+
