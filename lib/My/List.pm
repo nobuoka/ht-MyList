@@ -11,7 +11,6 @@ sub new {
         "next" => undef,
         "prev" => undef,
         "value" => undef,
-        "it" => undef,
     };
     bless {
         "b" => $begin_elem,
@@ -27,8 +26,7 @@ sub DESTROY {
     my $n;
     do {
         $n = $e->{"next"};
-        my @keys = keys %$e;
-        foreach( @keys ) {
+        foreach( keys %$e ) {
             undef $e->{$_}; 
         }
         print "DESTROY", "\n";
@@ -42,7 +40,6 @@ sub append {
         "next" => undef,
         "prev" => $self->{"e"},
         "value" => $value,
-        "it" => undef,
     };
     $self->{"e"}{"next"} = $elem;
     $self->{"e"} = $elem;
@@ -52,7 +49,31 @@ sub append {
 
 sub iterator {
     my $self = shift;
-    return My::List::Iterator->new( $self );
+    return My::List::Iterator->new( $self, $self->{"b"} );
+}
+
+# ---- library private functions ----
+
+sub _has_next {
+    my $pos = shift;
+    while( 1 ) {
+        if( ! $pos->{"next"} ) { return 0; }
+        if( $pos->{"next"}->{"prev"} == $pos ) { return 1; }
+        $pos = $pos->{"next"};
+    }
+}
+
+sub _next {
+    my $pos = shift;
+    while( 1 ) {
+        if( ! $pos->{"next"} ) { die "TODO : Use Carp module"; }
+        if( $pos->{"next"}->{"prev"} == $pos ) {
+            $pos = $pos->{"next"};
+            last;
+        }
+        $pos = $pos->{"next"};
+    }
+    return ( $pos->{"value"}, $pos );
 }
 
 1;
