@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use Carp;
 
 use My::List;
 
@@ -24,7 +25,8 @@ sub has_next {
 
 sub next {
     my $self = shift;
-    my ( $next_val, $next_pos ) = My::List::_next( $self->{"pos"} );
+    my ( $next_val, $next_pos ) = eval{ My::List::_next( $self->{"pos"} ); };
+    Carp::croak $@ if $@;
     $self->{"pos"} = $next_pos;
     return $next_val;
 }

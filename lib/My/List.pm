@@ -1,5 +1,6 @@
 use strict;
 use warnings;
+use Carp;
 
 use My::List::Iterator;
 
@@ -66,7 +67,7 @@ sub _has_next {
 sub _next {
     my $pos = shift;
     while( 1 ) {
-        if( ! $pos->{"next"} ) { die "TODO : Use Carp module"; }
+        $pos->{"next"} or die "Next element doesn't exist!";
         if( $pos->{"next"}->{"prev"} == $pos ) {
             $pos = $pos->{"next"};
             last;
