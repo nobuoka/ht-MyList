@@ -50,19 +50,34 @@ sub can_be_converted_to_array : Tests {
     is_deeply( $list->to_array_ref(), $vals );
 }
 
-sub test_of_insert_before : Tests {
+sub test_of_insert_and_remove : Tests {
     my $self = shift;
     my $list = My::List->new();
     my $vals = [ 1, 4, 234, 5634, 32 ];
     foreach( @$vals ) {
-#print "t";
-        $list->insert_before( $_, 0 );
+        $list->insert( 0, $_ );
     }
-#print "d";
     my $aref = $list->to_array_ref(); 
-#print "n";
     is_deeply( $aref, [ reverse @$vals ] );
-#print "e";
+    $list->remove( 2 );
+    is_deeply( $list->to_array_ref(), [ 32, 5634, 4, 1 ] );
+    $list->remove( 0 );
+    is_deeply( $list->to_array_ref(), [ 5634, 4, 1 ] );
+    $list->remove( 2 );
+    is_deeply( $list->to_array_ref(), [ 5634, 4 ] );
+    $list->remove( 1 );
+    is_deeply( $list->to_array_ref(), [ 5634 ] );
+    is( $list->remove( 0 ), 5634 );
+    is_deeply( $list->to_array_ref(), [ ] );
+    eval { $list->remove( 0 ) };
+    like( $@, qr/Invalid index/, "invalid index error" );
+    # 新しいリスト
+    $list = My::List->new();
+    foreach( 0..$#$vals ) {
+        $list->insert( $_, $$vals[$_] );
+    }
+    $aref = $list->to_array_ref(); 
+    is_deeply( $aref, $vals );
 }
 
 __PACKAGE__->runtests();

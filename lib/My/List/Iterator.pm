@@ -20,12 +20,12 @@ sub new {
 
 sub has_next {
     my $self = shift;
-    return My::List::_has_next( $self->{"pos"} );
+    return $self->{"list"}->_has_next( $self->{"pos"} );
 }
 
 sub next {
     my $self = shift;
-    my ( $next_val, $next_pos ) = eval{ My::List::_next( $self->{"pos"} ); };
+    my ( $next_val, $next_pos ) = eval{ $self->{"list"}->_next( $self->{"pos"} ); };
     Carp::croak $@ if $@;
     $self->{"pos"} = $next_pos;
     return $next_val;

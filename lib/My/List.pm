@@ -27,29 +27,27 @@ sub DESTROY {
     } while( $e = $n )
 }
 
-sub insert_before {
+sub insert {
     my $self = shift;
-    my ( $val, $pos ) = @_;
-    if( ref $pos ) {
-        $pos->isa( "My::List::Iterator" ) or Carp::croak "unexpected position value";
-        $pos = $pos->_position;
-    } else {
-        $pos = $self->__num_to_pos( $pos );
-    }
-    $self->__create_posobj_and_insert_before( $pos, $val );
+    my ( $pos, $val ) = @_;
+    #if( ref $pos ) {
+    #    $pos->isa( "My::List::Iterator" ) or Carp::croak "unexpected position value";
+    #    $pos = $pos->_position;
+    #} else {
+    $pos = $self->__idx_to_pos( $pos );
+    #}
+    $self->__create_posobj_and_insert_before( $pos->{"next"}, $val, 1 );
     return $val;
 }
-sub insert_after {
+
+sub remove {
     my $self = shift;
-    my ( $val, $pos ) = @_;
-}
-sub remove_before {
-    my $self = shift;
-    my ( $pos ) = @_;
-}
-sub remove_after {
-    my $self = shift;
-    my ( $pos ) = @_;
+    my ( $idx ) = @_;
+    if( $idx < 0 or $self->{"length"} <= $idx ) {
+        Carp::croak "Invalid index (" . $idx . ")";
+    }
+    my $pos = $self->__idx_to_pos( $idx );
+    $self->__remove_posobj_and_return_prev_value( $pos->{"next"} );
 }
 
 sub append {
@@ -91,27 +89,20 @@ sub to_array_ref {
     return $aref;
 }
 
-# ---- library private functions ----
+# ---- library private methods ----
 
 sub _has_next {
+    my $self = shift;
     my $pos = shift;
-    while( 1 ) {
-        if( ! $pos->{"next"} ) { return 0; }
-        if( $pos->{"next"}->{"prev"} == $pos ) { return 1; }
-        $pos = $pos->{"next"};
-    }
+    $pos = $self->__normalize_pos( $pos );
+    return ! ! $pos->{"next"};
 }
 
 sub _next {
+    my $self = shift;
     my $pos = shift;
-    while( 1 ) {
-        $pos->{"next"} or die "Next element doesn't exist!";
-        if( $pos->{"next"}->{"prev"} == $pos ) {
-            $pos = $pos->{"next"};
-            last;
-        }
-        $pos = $pos->{"next"};
-    }
+    $pos = $self->__normalize_pos( $pos );
+    $pos = $pos->{"next"} or die "next element doesn't exist";
     return ( $pos->{"value"}, $pos );
 }
 
@@ -143,18 +134,24 @@ sub __remove_posobj_and_return_prev_value {
     my $self = shift;
     my ( $pos ) = @_;
     my ( $next, $prev ) = ( $pos->{"next"}, $pos->{"prev"} );
+    if( ! $pos ) { die; }
     if( $self->{"b"} == $pos ) { die "Cant remove the first position"; }
-    if( ! $prev->{"next"} or $prev->{"next"} != $pos ) {
+    if( $prev->{"npos"} ) {
         die "This position is already removed";
     }
     $prev->{"next"} = $next;
     if( $next ) { $next->{"prev"} = $prev; }
     if( $self->{"e"} == $pos ) { $self->{"e"} = $prev; }
+    my $val = $pos->{"value"};
+    $pos->{"npos"} = $pos->{"prev"};
+    undef $pos->{"value"};
+    undef $pos->{"prev"};
+    undef $pos->{"next"};
     -- $self->{"length"};
-    return $pos->{"value"};
+    return $val;
 }
 
-sub __num_to_pos {
+sub __idx_to_pos {
     my $self = shift;
     my $num = shift;
     if( $num < 0 or $self->{"length"} < $num ) {
@@ -163,6 +160,15 @@ sub __num_to_pos {
     my $pos = $self->{"b"};
     for( my $i = 0; $i < $num; ++ $i ) {
         $pos = $pos->{"next"};
+    }
+    return $pos;
+}
+
+sub __normalize_pos {
+    my $self = shift;
+    my $pos = shift;
+    while( $pos->{"npos"} ) {
+        $pos = $pos->{"npos"};
     }
     return $pos;
 }
