@@ -31,4 +31,8 @@ sub next {
     return $next_val;
 }
 
+sub _position {
+    $_[0]->{"pos"};
+}
+
 1;
