@@ -1,6 +1,5 @@
 use strict;
 use warnings;
-use utf8;
 
 use My::List;
 
@@ -40,7 +39,22 @@ sub can_be_used_as_a_stack_by_using_push_and_pop_methods : Tests {
     is( $list->size, 0 );
 }
 
-# リストを配列に変換し, そのリファレンスを得る
+# unshift と shift を使ってスタックのように使える
+sub can_be_used_as_a_stack_by_using_shift_and_unshift_methods : Tests {
+    my $self = shift;
+    my $list = My::List->new();
+    my $vals = [ "va", "good luck", "日本語" ];
+    foreach( 0..$#$vals ) {
+        $list->unshift( $$vals[$_] );
+        is( $list->size, $_ + 1, "list size" );
+    }
+    foreach( 0..$#$vals ) {
+        is( $list->shift(), $$vals[$#$vals-$_], "value" );
+    }
+    is( $list->size, 0 );
+}
+
+# リストを配列に変換する
 sub can_be_converted_to_array : Tests {
     my $self = shift;
     my $list = My::List->new();
@@ -50,6 +64,7 @@ sub can_be_converted_to_array : Tests {
     is_deeply( $list->to_array_ref(), $vals );
 }
 
+# インデックスを指定してリストに追加したり削除したりする
 sub test_of_insert_and_remove : Tests {
     my $self = shift;
     my $list = My::List->new();

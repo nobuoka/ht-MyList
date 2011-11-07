@@ -31,6 +31,19 @@ sub next {
     return $next_val;
 }
 
+sub has_prev {
+    my $self = shift;
+    return $self->{"list"}->_has_prev( $self->{"pos"} );
+}
+
+sub prev {
+    my $self = shift;
+    my ( $prev_val, $prev_pos ) = eval{ $self->{"list"}->_prev( $self->{"pos"} ); };
+    Carp::croak $@ if $@;
+    $self->{"pos"} = $prev_pos;
+    return $prev_val;
+}
+
 sub _position {
     $_[0]->{"pos"};
 }
