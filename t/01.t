@@ -85,7 +85,7 @@ sub test_of_insert_and_remove : Tests {
     is( $list->remove( 0 ), 5634 );
     is_deeply( $list->to_array_ref(), [ ] );
     eval { $list->remove( 0 ) };
-    like( $@, qr/Invalid index/, "invalid index error" );
+    like( $@, qr/invalid index/, "invalid index error" );
     # 新しいリスト
     $list = My::List->new();
     foreach( 0..$#$vals ) {

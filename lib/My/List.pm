@@ -6,6 +6,51 @@ use My::List::Iterator;
 
 package My::List;
 
+=head1 NAME
+
+My::List -- 結合リスト
+
+=head1 SYNOPSIS
+
+  use My::List
+  my $list = My::List->new();
+  
+  # 末尾への要素の追加
+  $list->append( 1 );
+  $list->append( 2 );
+  
+  # インデックスを指定して, 要素の取得, 削除, 挿入
+  $list->get( 0 );    #=> 1
+  $list->remove( 0 ); #=> 1
+  $list->insert( 1, "new value" );
+
+  # リストを配列に変換してリファレンスを得る
+  @{$list->to_array_ref()}; #=> ( 2, "new value" )
+  
+  # push, pop でスタックのように使える
+  $list->push( "aaa" );
+  $list->push( "bbb" );
+  $list->pop(); #=> "bbb"
+  
+  # push と shift でキューのように使える
+  $list->push( "ccc" );
+  $list->shift(); #=> "aaa"
+  $list->shift(); #=> "ccc"
+  
+  # イテレータで走査可能 (詳細は My::List::Iterator のドキュメントを)
+  my $it = $list->iterator;
+  while( $it->has_next ) {
+      my $val = $it->next;
+  }
+
+=head1 DESCRIPTION
+
+このクラスは, 結合リストの実装です. 
+配列の添え字と同じ感覚で, index を使って要素の位置を指定できます. 
+(より正確に言うと, index によって指定された位置は要素と要素の間を指します. イテレータが指す位置も要素と要素の間になります.)
+
+=cut
+
 # ---- destructor ----
 
 # DESTROY 時には Iterator は存在しない
@@ -24,6 +69,18 @@ sub DESTROY {
 
 # ---- public class methods ----
 
+=head2 Class methods
+
+=over
+
+=item My::List->new()
+
+新しい My::List オブジェクトを生成します.
+
+=back
+
+=cut
+
 sub new {
     my $class = CORE::shift;
     my $self  = bless {}, $class;
@@ -33,10 +90,42 @@ sub new {
 
 # ---- public instance methods ----
 
+=head2 Instance methods
+
+=over
+
+=item $list->get( $index )
+
+$index で指定されたインデックスの位置にある値を返します. 
+$index は, 0 以上 $list->size 未満の数値でなければいけません.
+
+=item $list->insert( $index, $value )
+
+$index で指定された位置に新たに $value を挿入します. 
+
+=item $list->remove( $index )
+
+$index で指定された位置の値を削除します. 
+
+=back
+
+=cut
+
+sub get {
+    my $self = CORE::shift;
+    my ( $idx ) = @_;
+    Carp::croak "invalid index" if $idx < 0 or $self->{"length"} <= $idx;
+    $pos = eval{ $self->__idx_to_pos( $idx ) };
+    Carp::croak if $@;
+    return $pos->{"next"}{"value"};
+    
+}
+
 sub insert {
     my $self = CORE::shift;
     my ( $pos, $val ) = @_;
-    $pos = $self->__idx_to_pos( $pos );
+    $pos = eval{ $self->__idx_to_pos( $pos ) };
+    Carp::croak if $@;
     $self->_insert_after( $pos, $val );
     return $val;
 }
@@ -44,10 +133,9 @@ sub insert {
 sub remove {
     my $self = CORE::shift;
     my ( $idx ) = @_;
-    if( $idx < 0 or $self->{"length"} <= $idx ) {
-        Carp::croak "Invalid index (" . $idx . ")";
-    }
-    my $pos = $self->__idx_to_pos( $idx );
+    Carp::croak "invalid index" if $idx < 0 or $self->{"length"} <= $idx;
+    my $pos = eval{ $self->__idx_to_pos( $idx ) };
+    Carp::croak if $@;
     $self->_remove_after( $pos );
 }
 
@@ -196,6 +284,13 @@ sub __create_posobj_and_insert_before {
     return $pos;
 }
 
+# 指定された posobj を削除する.
+# posobj が保持している value (posobj が表す位置の直前の値) も同時に削除される.
+# 削除された値を返す. 削除された位置を表しているイテレータが存在していた場合, 
+# そのイテレータは削除された位置の直前の位置を指すようになる. 
+# 
+# param $pos : どの posobj を削除するか
+# return : 削除された $pos が元々保持していた value
 sub __remove_posobj_and_return_prev_value {
     my $self = CORE::shift;
     my ( $pos ) = @_;
@@ -217,6 +312,10 @@ sub __remove_posobj_and_return_prev_value {
     return $val;
 }
 
+# インデックスから posobj を取得する.
+# 
+# param $idx : インデックス. 0 から $self->size までの範囲
+# return : $idx で指定されたインデックスによって指定される位置を表す posobj
 sub __idx_to_pos {
     my $self = CORE::shift;
     my $num = CORE::shift;
@@ -230,9 +329,10 @@ sub __idx_to_pos {
     return $pos;
 }
 
+# 既に削除されている posobj の場合, 正規の位置を返す. 
 sub __normalize_pos {
     my $self = CORE::shift;
-    my $pos = CORE::shift;
+    ( my $pos  = CORE::shift ) or die;
     while( $pos->{"npos"} ) {
         $pos = $pos->{"npos"};
     }
