@@ -2,21 +2,9 @@ use strict;
 use warnings;
 use Carp;
 
-use My::List;
-
 package My::List::Iterator;
 
-sub new {
-    my $class = shift;
-    my $list  = shift;
-    my $pos   = shift;
-    my $self = bless {
-        # Iterator が存在するのに List が存在しないという状況を回避
-        "list" => $list,
-        "pos"  => $pos, 
-    }, $class;
-    return $self;
-}
+# ---- public instance methods ----
 
 sub has_next {
     my $self = shift;
@@ -43,6 +31,42 @@ sub prev {
     $self->{"pos"} = $prev_pos;
     return $prev_val;
 }
+
+sub insert_prev {
+    my $self = shift;
+    $self->{"list"}->_insert_before( $self->{"pos"}, $_[0] );
+}
+
+sub insert_next {
+    my $self = shift;
+    $self->{"list"}->_insert_after( $self->{"pos"}, $_[0] );
+}
+
+sub remove_prev {
+    my $self = shift;
+    $self->{"list"}->_remove_before( $self->{"pos"} );
+}
+
+sub remove_next {
+    my $self = shift;
+    $self->{"list"}->_remove_after( $self->{"pos"} );
+}
+
+# ---- library private class emthods ----
+
+sub _new {
+    my $class = shift;
+    my $list  = shift;
+    my $pos   = shift;
+    my $self = bless {
+        # Iterator が存在するのに List が存在しないという状況を回避
+        "list" => $list,
+        "pos"  => $pos, 
+    }, $class;
+    return $self;
+}
+
+# ---- library private instance methods ----
 
 sub _position {
     $_[0]->{"pos"};

@@ -6,12 +6,7 @@ use My::List::Iterator;
 
 package My::List;
 
-sub new {
-    my $class = CORE::shift;
-    my $self  = bless { "b" => undef, "e" => undef, "length" => -1 }, $class;
-    $self->__create_posobj_and_insert_before( undef, undef );
-    return $self;
-}
+# ---- destructor ----
 
 # DESTROY 時には Iterator は存在しない
 sub DESTROY {
@@ -27,16 +22,22 @@ sub DESTROY {
     } while( $e = $n )
 }
 
+# ---- public class methods ----
+
+sub new {
+    my $class = CORE::shift;
+    my $self  = bless {}, $class;
+    $self->__initialize();
+    return $self;
+}
+
+# ---- public instance methods ----
+
 sub insert {
     my $self = CORE::shift;
     my ( $pos, $val ) = @_;
-    #if( ref $pos ) {
-    #    $pos->isa( "My::List::Iterator" ) or Carp::croak "unexpected position value";
-    #    $pos = $pos->_position;
-    #} else {
     $pos = $self->__idx_to_pos( $pos );
-    #}
-    $self->__create_posobj_and_insert_before( $pos->{"next"}, $val, 1 );
+    $self->_insert_after( $pos, $val );
     return $val;
 }
 
@@ -47,13 +48,13 @@ sub remove {
         Carp::croak "Invalid index (" . $idx . ")";
     }
     my $pos = $self->__idx_to_pos( $idx );
-    $self->__remove_posobj_and_return_prev_value( $pos->{"next"} );
+    $self->_remove_after( $pos );
 }
 
 sub append {
     my $self = CORE::shift;
     my $value = CORE::shift;
-    my $elem = $self->__create_posobj_and_insert_before( undef, $value );
+    my $elem = $self->_insert_after( $self->{"e"}, $value );
     return $value;
 }
 sub push {
@@ -63,20 +64,20 @@ sub push {
 sub pop {
     my $self = CORE::shift;
     $self->{"e"} != $self->{"b"} or Carp::croak "No item exists";
-    return $self->__remove_posobj_and_return_prev_value( $self->{"e"} );
+    return $self->_remove_before( $self->{"e"} );
 }
 
 sub unshift {
     my $self = CORE::shift;
     my $value = CORE::shift;
-    my $elem = $self->__create_posobj_and_insert_before( $self->{"b"}{"next"}, $value, 1 );
+    my $elem = $self->_insert_before( $self->{"b"}, $value );
     return $value;
 }
 
 sub shift {
     my $self = CORE::shift;
     $self->{"e"} != $self->{"b"} or Carp::croak "No item exists";
-    return $self->__remove_posobj_and_return_prev_value( $self->{"b"}{"next"} );
+    return $self->_remove_after( $self->{"b"} );
 }
 
 sub size {
@@ -86,7 +87,7 @@ sub size {
 
 sub iterator {
     my $self = CORE::shift;
-    return My::List::Iterator->new( $self, $self->{"b"} );
+    return My::List::Iterator->_new( $self, $self->{"b"} );
 }
 
 # 指定した位置を開始位置とするイテレータを生成
@@ -94,7 +95,7 @@ sub iterator_at {
     my $self = CORE::shift;
     my $pos  = CORE::shift;
     $pos = $self->__idx_to_pos( $pos );
-    return My::List::Iterator->new( $self, $pos );
+    return My::List::Iterator->_new( $self, $pos );
 }
 
 sub to_array_ref {
@@ -103,14 +104,12 @@ sub to_array_ref {
     my $aref = [];
     while( $e ) {
         CORE::push @$aref, $e->{"value"};
-#print "e ", $e, "\n";
-#sleep 1;
         $e = $e->{"next"};
     }
     return $aref;
 }
 
-# ---- library private methods ----
+# ---- library private instance methods ----
 
 sub _has_next {
     my $self = CORE::shift;
@@ -143,6 +142,34 @@ sub _prev {
     return ( $val, $pos );
 }
 
+sub _insert_after {
+    my $self = CORE::shift;
+    my ( $pos, $val ) = @_;
+    $pos = $self->__normalize_pos( $pos );
+    my $elem = $self->__create_posobj_and_insert_before( $pos->{"next"}, $val, 1 );
+}
+
+sub _insert_before {
+    my $self = CORE::shift;
+    my ( $pos, $val ) = @_;
+    $pos = $self->__normalize_pos( $pos );
+    my $elem = $self->__create_posobj_and_insert_before( $pos, $val );
+}
+
+sub _remove_after {
+    my $self = CORE::shift;
+    my $pos  = CORE::shift;
+    $pos = $self->__normalize_pos( $pos );
+    $self->__remove_posobj_and_return_prev_value( $pos->{"next"} );
+}
+
+sub _remove_before {
+    my $self = CORE::shift;
+    my $pos  = CORE::shift;
+    $pos = $self->__normalize_pos( $pos );
+    $self->__remove_posobj_and_return_prev_value( $pos );
+}
+
 # ---- private methods ----
 
 # リストの位置 (およびその位置の前の値) を保持する連想配列を作り, 指定された位置に挿入する.
@@ -156,16 +183,12 @@ sub _prev {
 sub __create_posobj_and_insert_before {
     my $self = CORE::shift;
     my ( $next, $val, $not_exchange ) = @_;
-#if( $next ) { print "next ", $next, $next->{"prev"} ? ", next->prev " . $next->{"prev"} : "", 
-#$next->{"next"} ? ", next->next " . $next->{"next"} : "", "\n"; }
     my $prev = ( $next ? $next->{"prev"} : $self->{"e"} );
-#if( $prev ) { print "prev ", $prev, $prev->{"prev"} ? ", prev->prev " . $prev->{"prev"} : "", 
-#$prev->{"next"} ? ", prev->next " . $prev->{"next"} : "", "\n"; }
     my $pos = { "next" => $next, "prev" => $prev, "value" => $val };
     if( $next ) { $next->{"prev"} = $pos; }
     if( $prev ) { $prev->{"next"} = $pos; }
-    if( ( ! $self->{"b"} ) or ( $next and $next == $self->{"b"} ) ) { $self->{"b"} = $pos; }
-    if( ( ! $self->{"e"} ) or ( $prev and $prev == $self->{"e"} ) ) { $self->{"e"} = $pos; }
+    if( $next and $next == $self->{"b"} ) { $self->{"b"} = $pos; }
+    if( $prev and $prev == $self->{"e"} ) { $self->{"e"} = $pos; }
     if( $next and ! $not_exchange ) {
         ( $pos->{"value"}, $next->{"value"} ) = ( $next->{"value"}, $pos->{"value"} );
     }
@@ -214,6 +237,14 @@ sub __normalize_pos {
         $pos = $pos->{"npos"};
     }
     return $pos;
+}
+
+sub __initialize {
+    my $self = CORE::shift;
+    ( ( ! defined $self->{"b"} ) and ( ! defined $self->{"length"} ) and ( ! defined $self->{"e"} ) ) or
+        die "already initialied";
+    $self->{"e"} = $self->{"b"} = { "next" => undef, "prev" => undef, "value" => undef };
+    $self->{"length"} = 0;
 }
 
 1;
