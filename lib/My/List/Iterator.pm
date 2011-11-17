@@ -43,6 +43,8 @@ My::List#iterator_at メソッドを使用してください.
 
 =head2 Public instance methods
 
+=over
+
 =item $it->has_next
 
 現在の位置の後ろに値が存在するかどうかを表します. 
@@ -95,7 +97,7 @@ My::List#iterator_at メソッドを使用してください.
 
 削除すべき値が存在しないような状況でこのメソッドを呼ぶと例外が発生します.
  
-=item 
+=back 
 
 =cut
 
