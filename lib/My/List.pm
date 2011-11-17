@@ -12,7 +12,7 @@ My::List -- 結合リスト
 
 =head1 SYNOPSIS
 
-  use My::List
+  use My::List;
   my $list = My::List->new();
   
   # 末尾への要素の追加
@@ -107,6 +107,50 @@ $index で指定された位置に新たに $value を挿入します.
 
 $index で指定された位置の値を削除します. 
 
+=item $list->append( $value )
+
+リストの最後の位置の後ろに, 新たに $value を挿入します. 
+処理結果は
+  $list->insert( $list->size, $value )
+と等価ですが, 現在の実装においてはこちらのメソッドを使用した方が高速に動作します. 
+
+=item $list->push( $value )
+
+$list->append( $value) メソッドの別名です.
+
+=item $list->pop()
+
+リスト中の最後の値を取り出し, その値を返します. 
+このメソッドの実行後, 取り出した値はリストには存在しません. 
+
+=item $list->unshift( $value )
+
+リストの最初の位置の後ろに, 新たに $value を挿入します. 
+
+=item $list->shift()
+
+リスト中の最初の値を取り出し, その値を返します. 
+このメソッドの実行後, 取り出した値はリストには存在しません. 
+
+=item $list->size
+
+リスト中に存在する値の個数を返します. 
+
+=item $list->iterator()
+
+このリストのイテレータを新たに生成して, 生成したイテレータを返します. 
+初期状態でイテレータが指す位置はリストの最初の位置 (インデックス 0 の位置) です. 
+
+=item $list->iterator_at( $index )
+
+このリストのイテレータを新たに生成して, 生成したイテレータを返します. 
+初期状態でイテレータが指す位置を引数 $index で指定します. 
+
+=item $list->to_array_ref()
+
+リスト中の値を順に格納した配列を生成し, その配列へのリファレンスを返します. 
+リスト中に値が存在しない場合は, 空配列を生成し, その空配列へのリファレンスを返します. 
+
 =back
 
 =cut
@@ -115,7 +159,7 @@ sub get {
     my $self = CORE::shift;
     my ( $idx ) = @_;
     Carp::croak "invalid index" if $idx < 0 or $self->{"length"} <= $idx;
-    $pos = eval{ $self->__idx_to_pos( $idx ) };
+    my $pos = eval{ $self->__idx_to_pos( $idx ) };
     Carp::croak if $@;
     return $pos->{"next"}{"value"};
     
@@ -198,6 +242,8 @@ sub to_array_ref {
 }
 
 # ---- library private instance methods ----
+
+# My::List 自身, および My::List::Iterator のための API
 
 sub _has_next {
     my $self = CORE::shift;
